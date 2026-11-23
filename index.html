@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DELTA FORCE Warfare Randomizer</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1118;--panel:#141e29;--panel2:#1b2937;--line:#304253;--text:#eef4f8;--muted:#9aabba;--accent:#d7a843;--green:#8fca9c}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#26394a 0,transparent 55%),var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1050px;margin:auto;padding:28px 18px 60px}.top{text-align:center;margin-bottom:24px}.eyebrow{color:var(--accent);letter-spacing:.22em;font-size:12px;font-weight:800}.top h1{font-size:clamp(28px,5vw,46px);margin:8px 0 4px;letter-spacing:.06em}.top p{color:var(--muted);margin:0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.panel{background:linear-gradient(145deg,var(--panel),#101923);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 12px 30px #0003}
+.panel h2{font-size:15px;color:var(--muted);margin:0 0 14px;letter-spacing:.08em}.result{min-height:180px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;background:var(--panel2);border:1px solid #3b5063;border-radius:12px;padding:18px}
+.result .name{font-size:clamp(24px,4vw,34px);font-weight:850;margin:8px 0}.result .sub{color:var(--muted);font-size:13px}.tag{font-size:11px;border:1px solid #53697b;border-radius:99px;padding:4px 10px;color:#c7d4df}
+.actions{display:flex;gap:10px;justify-content:center;margin:18px 0 8px;flex-wrap:wrap}button{border:0;border-radius:10px;padding:12px 18px;font-weight:800;cursor:pointer;font-size:14px}button:disabled{opacity:.4;cursor:not-allowed}.primary{background:var(--accent);color:#1b1b1b;min-width:190px}.secondary{background:#273746;color:var(--text);border:1px solid #40576a}.danger{background:#422b2b;color:#ffcccc;border:1px solid #704343}
+.note{text-align:center;color:var(--muted);font-size:12px;min-height:18px}.tabs{display:flex;gap:8px;margin:22px 0 12px;flex-wrap:wrap}.tab{background:#1b2937;color:#b9c8d4;border:1px solid var(--line)}.tab.active{background:var(--accent);color:#1b1b1b;border-color:var(--accent)}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.toolbar input,.toolbar select{background:#0e1720;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px}.toolbar input{flex:1;min-width:180px}
+.list{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:430px;overflow:auto;padding-right:4px}.item{display:flex;align-items:center;gap:8px;background:#101a24;border:1px solid #26394a;border-radius:9px;padding:9px;font-size:13px}.item input{accent-color:var(--accent)}.item small{display:block;color:var(--muted)}
+.history{display:flex;flex-direction:column;gap:8px}.entry{display:flex;justify-content:space-between;gap:12px;align-items:center;background:#101a24;border:1px solid #26394a;border-radius:9px;padding:12px}.entry b{display:block}.entry small{color:var(--muted)}.empty{color:var(--muted);text-align:center;padding:28px}
+footer{margin-top:20px;color:var(--muted);font-size:12px;line-height:1.7;text-align:center}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.list{grid-template-columns:repeat(2,1fr)}main{padding:20px 12px 40px}.panel{padding:15px}}
+</style>
+</head>
+<body><main>
+<header class="top"><div class="eyebrow">TACTICAL RANDOM CHALLENGE</div><h1>DELTA FORCE</h1><p>WARFARE RANDOMIZER</p></header>
+<section class="grid">
+ <div class="panel"><h2>OPERATOR / オペレーター</h2><div class="result"><span class="tag" id="opClass">未抽選</span><div class="name" id="operator">？？？</div><div class="sub">使用するキャラクター</div></div></div>
+ <div class="panel"><h2>WEAPON / 武器</h2><div class="result"><span class="tag" id="weaponType">未抽選</span><div class="name" id="weapon">？？？</div><div class="sub">使用する武器</div></div></div>
+</section>
+<div class="actions"><button class="primary" id="draw">⚡ 抽選する</button><button class="secondary" id="reset">結果をリセット</button></div><div class="note" id="status">キャラクターと武器を同時に抽選します。</div>
+<nav class="tabs"><button class="tab active" data-tab="exclude">抽選対象の設定</button><button class="tab" data-tab="history">抽選履歴</button></nav>
+<section class="panel" id="excludePanel"><h2>EXCLUDE / 抽選から除外</h2><p style="color:var(--muted);font-size:13px;margin-top:-6px">チェックを外すと、そのキャラ・武器は抽選されません。設定はこのブラウザに保存されます。</p>
+ <div class="toolbar"><input id="search" placeholder="名前で検索…"><select id="kind"><option value="all">キャラ・武器すべて</option><option value="operator">オペレーター</option><option value="weapon">武器</option></select><button class="secondary" id="allOn">すべて有効</button><button class="secondary" id="allOff">すべて除外</button></div>
+ <div id="pool" class="list"></div>
+</section>
+<section class="panel" id="historyPanel" hidden><div class="toolbar" style="justify-content:space-between"><h2 style="margin:0">HISTORY / 抽選履歴</h2><button class="danger" id="clearHistory">履歴を消去</button></div><div class="history" id="history"></div></section>
+<footer>抽選履歴・除外設定はブラウザ内に保存されます。ゲームのアップデートで追加・変更されたキャラや武器は、必要に応じてリストを更新してください。</footer>
+</main>
+<script>
+const operators=[
+["Vyron","突撃兵"],["D-Wolf","突撃兵"],["Nox","突撃兵"],["Tempest","突撃兵"],["Martelo","突撃兵"],
+["Stinger","支援兵"],["Toxik","支援兵"],["Vlinder","支援兵"],["Rover","支援兵"],
+["Shepherd","工兵"],["Uluru","工兵"],["Sineva","工兵"],["Gizmo","工兵"],["N-Two","工兵"],
+["Hackclaw","偵察兵"],["Luna","偵察兵"],["Raptor","偵察兵"],["Morse","偵察兵"]
+];
+const weapons=[
+["QBZ95-1","アサルトライフル"],["K416","アサルトライフル"],["PTR-32","アサルトライフル"],["M4A1","アサルトライフル"],["AUG","アサルトライフル"],["AK-12","アサルトライフル"],["M16A4","アサルトライフル"],["AKM","アサルトライフル"],["CAR-15","アサルトライフル"],["AKS-74","アサルトライフル"],["AS Val","アサルトライフル"],["CI-19","アサルトライフル"],["K437","アサルトライフル"],["KC-17","アサルトライフル"],["MK47","アサルトライフル"],["ASh-12","バトルライフル"],["G3","バトルライフル"],["M7","バトルライフル"],["MCX LT","アサルトライフル"],["SCAR-H","バトルライフル"],["SG552","アサルトライフル"],["AN-94","アサルトライフル"],["AR-57","アサルトライフル"],["RM277","アサルトライフル"],["MDR","アサルトライフル"],
+["Bizon","サブマシンガン"],["Vector","サブマシンガン"],["Vityaz","サブマシンガン"],["MP5","サブマシンガン"],["UZI","サブマシンガン"],["SMG-45","サブマシンガン"],["P90","サブマシンガン"],["MP7","サブマシンガン"],["QCQ171","サブマシンガン"],["MK4","サブマシンガン"],["SR-3M","サブマシンガン"],["Thompson","サブマシンガン"],
+["M700","スナイパーライフル"],["SV-98","スナイパーライフル"],["AWM","スナイパーライフル"],["R93","スナイパーライフル"],["M82","スナイパーライフル"],["CS/LR5","スナイパーライフル"],
+["VSS","マークスマンライフル"],["SVD","マークスマンライフル"],["SR-25","マークスマンライフル"],["SKS","マークスマンライフル"],["PSG-1","マークスマンライフル"],["M14","マークスマンライフル"],["SR9","マークスマンライフル"],["レバーアクションライフル","マークスマンライフル"],["Mini-14","マークスマンライフル"],["SVCH","マークスマンライフル"],
+["M249","ライトマシンガン"],["PKM","ライトマシンガン"],["M250","ライトマシンガン"],["QJB201","ライトマシンガン"],["M3","ライトマシンガン"],
+["S12K","ショットガン"],["M1014","ショットガン"],["M870","ショットガン"],["725","ショットガン"],["FS-12","ショットガン"],
+["G18","ハンドガン"],["QSZ-92G","ハンドガン"],[".357 Revolver","ハンドガン"],["G17","ハンドガン"],["93R","ハンドガン"],["Desert Eagle","ハンドガン"],["M1911","ハンドガン"],
+["Compound Bow","特殊武器"]
+];
+const all=[...operators.map(([name,type])=>({id:"o:"+name,name,type,kind:"operator"})),...weapons.map(([name,type])=>({id:"w:"+name,name,type,kind:"weapon"}))];
+let excluded=JSON.parse(localStorage.getItem("dfExcluded")||"[]");
+let history=JSON.parse(localStorage.getItem("dfHistory")||"[]");
+let lastOp=null,lastWeapon=null;
+const $=id=>document.getElementById(id);
+function save(){localStorage.setItem("dfExcluded",JSON.stringify(excluded));localStorage.setItem("dfHistory",JSON.stringify(history))}
+function drawOne(items,last){let pool=items.filter(x=>x.id!==last);if(!pool.length)pool=items;return pool[Math.floor(Math.random()*pool.length)]}
+function draw(){let ops=all.filter(x=>x.kind==="operator"&&!excluded.includes(x.id)),guns=all.filter(x=>x.kind==="weapon"&&!excluded.includes(x.id));if(!ops.length||!guns.length){$("status").textContent="抽選できるキャラと武器をそれぞれ1つ以上有効にしてください。";return}
+let op=drawOne(ops,lastOp),gun=drawOne(guns,lastWeapon);lastOp=op.id;lastWeapon=gun.id;
+$("operator").textContent=op.name;$("opClass").textContent=op.type;$("weapon").textContent=gun.name;$("weaponType").textContent=gun.type;
+let time=new Date().toLocaleString("ja-JP");history.unshift({op:op.name,opType:op.type,gun:gun.name,gunType:gun.type,time});history=history.slice(0,100);save();renderHistory();$("status").textContent="抽選完了！この組み合わせで出撃しよう。"}
+function renderPool(){let q=$("search").value.toLowerCase(),kind=$("kind").value;let arr=all.filter(x=>(kind==="all"||x.kind===kind)&&(x.name.toLowerCase().includes(q)||x.type.toLowerCase().includes(q)));$("pool").innerHTML=arr.map(x=>`<label class="item"><input type="checkbox" data-id="${x.id}" ${excluded.includes(x.id)?"":"checked"}><span>${x.name}<small>${x.kind==="operator"?"オペレーター":"武器"}・${x.type}</small></span></label>`).join("")||'<div class="empty">該当する項目がありません</div>';$("pool").querySelectorAll("input").forEach(el=>el.addEventListener("change",()=>{let id=el.dataset.id;excluded=el.checked?excluded.filter(x=>x!==id):[...excluded,id];save()}))}
+function renderHistory(){$("history").innerHTML=history.length?history.map(h=>`<div class="entry"><div><b>${h.op} <span style="color:var(--muted);font-weight:400">×</span> ${h.gun}</b><small>${h.opType} ・ ${h.gunType}</small></div><small>${h.time}</small></div>`).join(""):'<div class="empty">まだ抽選履歴はありません。</div>'}
+$("draw").onclick=draw;$("reset").onclick=()=>{$("operator").textContent="？？？";$("weapon").textContent="？？？";$("opClass").textContent="未抽選";$("weaponType").textContent="未抽選";$("status").textContent="表示結果をリセットしました。"};
+$("search").oninput=renderPool;$("kind").onchange=renderPool;
+$("allOn").onclick=()=>{excluded=[];save();renderPool()};$("allOff").onclick=()=>{excluded=all.map(x=>x.id);save();renderPool()};
+$("clearHistory").onclick=()=>{if(confirm("抽選履歴をすべて消去しますか？")){history=[];save();renderHistory()}};
+document.querySelectorAll(".tab").forEach(btn=>btn.onclick=()=>{document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b===btn));let hist=btn.dataset.tab==="history";$("excludePanel").hidden=hist;$("historyPanel").hidden=!hist});
+renderPool();renderHistory();
+</script></body></html>
