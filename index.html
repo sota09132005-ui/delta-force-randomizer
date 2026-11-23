@@ -16,6 +16,7 @@ main{max-width:1050px;margin:auto;padding:28px 18px 60px}.top{text-align:center;
 .list{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:430px;overflow:auto;padding-right:4px}.item{display:flex;align-items:center;gap:8px;background:#101a24;border:1px solid #26394a;border-radius:9px;padding:9px;font-size:13px}.item input{accent-color:var(--accent)}.item small{display:block;color:var(--muted)}
 .history{display:flex;flex-direction:column;gap:8px}.entry{display:flex;justify-content:space-between;gap:12px;align-items:center;background:#101a24;border:1px solid #26394a;border-radius:9px;padding:12px}.entry b{display:block}.entry small{color:var(--muted)}.empty{color:var(--muted);text-align:center;padding:28px}
 footer{margin-top:20px;color:var(--muted);font-size:12px;line-height:1.7;text-align:center}
+.objective-panel{margin-top:16px}.objective-result{background:var(--panel2);border:1px solid #3b5063;border-radius:12px;padding:22px;text-align:center}.objective-name{font-size:clamp(20px,3.5vw,28px);font-weight:850;margin:12px 0}.objective-actions{display:flex;justify-content:center;margin-top:12px}
 @media(max-width:700px){.grid{grid-template-columns:1fr}.list{grid-template-columns:repeat(2,1fr)}main{padding:20px 12px 40px}.panel{padding:15px}}
 </style>
 </head>
@@ -24,6 +25,15 @@ footer{margin-top:20px;color:var(--muted);font-size:12px;line-height:1.7;text-al
 <section class="grid">
  <div class="panel"><h2>OPERATOR / オペレーター</h2><div class="result"><span class="tag" id="opClass">未抽選</span><div class="name" id="operator">？？？</div><div class="sub">使用するキャラクター</div></div></div>
  <div class="panel"><h2>WEAPON / 武器</h2><div class="result"><span class="tag" id="weaponType">未抽選</span><div class="name" id="weapon">？？？</div><div class="sub">使用する武器</div></div></div>
+</section>
+<section class="panel objective-panel">
+ <h2>MISSION / ランダム目標</h2>
+ <div class="objective-result">
+  <span class="tag">今回のチャレンジ</span>
+  <div class="objective-name" id="objective">抽選すると目標が決まります</div>
+  <div class="sub" id="objectiveHint">キャラクターと武器に合わせて目標を達成しよう</div>
+ </div>
+ <div class="objective-actions"><button class="secondary" id="rerollObjective">目標だけ再抽選</button></div>
 </section>
 <div class="actions"><button class="primary" id="draw">⚡ 抽選する</button><button class="secondary" id="reset">結果をリセット</button></div><div class="note" id="status">キャラクターと武器を同時に抽選します。</div>
 <nav class="tabs"><button class="tab active" data-tab="exclude">抽選対象の設定</button><button class="tab" data-tab="history">抽選履歴</button></nav>
@@ -36,10 +46,10 @@ footer{margin-top:20px;color:var(--muted);font-size:12px;line-height:1.7;text-al
 </main>
 <script>
 const operators=[
-["Vyron","突撃兵"],["D-Wolf","突撃兵"],["Nox","突撃兵"],["Tempest","突撃兵"],["Martelo","突撃兵"],
-["Stinger","支援兵"],["Toxik","支援兵"],["Vlinder","支援兵"],["Rover","支援兵"],
-["Shepherd","工兵"],["Uluru","工兵"],["Sineva","工兵"],["Gizmo","工兵"],["N-Two","工兵"],
-["Hackclaw","偵察兵"],["Luna","偵察兵"],["Raptor","偵察兵"],["Morse","偵察兵"]
+["威龍","突撃兵"],["ダイアウルフ","突撃兵"],["ノックス","突撃兵"],["テンペスト","突撃兵"],["マルテロ","突撃兵"],
+["スティンガー","支援兵"],["蠱毒","支援兵"],["フリンダラ","支援兵"],["ローバー","支援兵"],
+["シェパード","工兵"],["ウルル","工兵"],["シネヴァ","工兵"],["ギズモ","工兵"],["N-2","工兵"],
+["ハッキングクロー","偵察兵"],["ルナ","偵察兵"],["ラプター","偵察兵"],["モールス","偵察兵"]
 ];
 const weapons=[
 ["QBZ95-1","アサルトライフル"],["K416","アサルトライフル"],["PTR-32","アサルトライフル"],["M4A1","アサルトライフル"],["AUG","アサルトライフル"],["AK-12","アサルトライフル"],["M16A4","アサルトライフル"],["AKM","アサルトライフル"],["CAR-15","アサルトライフル"],["AKS-74","アサルトライフル"],["AS Val","アサルトライフル"],["CI-19","アサルトライフル"],["K437","アサルトライフル"],["KC-17","アサルトライフル"],["MK47","アサルトライフル"],["ASh-12","バトルライフル"],["G3","バトルライフル"],["M7","バトルライフル"],["MCX LT","アサルトライフル"],["SCAR-H","バトルライフル"],["SG552","アサルトライフル"],["AN-94","アサルトライフル"],["AR-57","アサルトライフル"],["RM277","アサルトライフル"],["MDR","アサルトライフル"],
@@ -52,19 +62,40 @@ const weapons=[
 ["Compound Bow","特殊武器"]
 ];
 const all=[...operators.map(([name,type])=>({id:"o:"+name,name,type,kind:"operator"})),...weapons.map(([name,type])=>({id:"w:"+name,name,type,kind:"weapon"}))];
-let excluded=JSON.parse(localStorage.getItem("dfExcluded")||"[]");
-let history=JSON.parse(localStorage.getItem("dfHistory")||"[]");
+
+const operatorNameMigration = {"Vyron": "威龍", "D-Wolf": "ダイアウルフ", "Nox": "ノックス", "Tempest": "テンペスト", "Martelo": "マルテロ", "Stinger": "スティンガー", "Toxik": "蠱毒", "Vlinder": "フリンダラ", "Rover": "ローバー", "Shepherd": "シェパード", "Uluru": "ウルル", "Sineva": "シネヴァ", "Gizmo": "ギズモ", "N-Two": "N-2", "Hackclaw": "ハッキングクロー", "Luna": "ルナ", "Raptor": "ラプター", "Morse": "モールス"};
+let excluded=JSON.parse(localStorage.getItem("dfExcluded")||"[]").map(id=>id.startsWith("o:") ? "o:"+(operatorNameMigration[id.slice(2)]||id.slice(2)) : id);
+let history=JSON.parse(localStorage.getItem("dfHistory")||"[]").map(h=>({...h,op:operatorNameMigration[h.op]||h.op}));
 let lastOp=null,lastWeapon=null;
 const $=id=>document.getElementById(id);
 function save(){localStorage.setItem("dfExcluded",JSON.stringify(excluded));localStorage.setItem("dfHistory",JSON.stringify(history))}
 function drawOne(items,last){let pool=items.filter(x=>x.id!==last);if(!pool.length)pool=items;return pool[Math.floor(Math.random()*pool.length)]}
+const objectives=[
+ {text:"陣地を1か所制圧する",hint:"攻撃・防衛どちらでもOK"},
+ {text:"陣地を2か所制圧する",hint:"味方と協力して目標地点を確保"},
+ {text:"陣地を1回防衛する",hint:"敵の奪取を阻止する"},
+ {text:"敵を3キルする",hint:"この抽選で選ばれた武器を使用"},
+ {text:"敵を5キルする",hint:"この抽選で選ばれた武器を使用"},
+ {text:"敵を8キルする",hint:"この抽選で選ばれた武器を使用"},
+ {text:"敵を10キルする",hint:"腕試しチャレンジ！"},
+ {text:"アシストを5回獲得する",hint:"味方と連携してダメージを与えよう"},
+ {text:"味方を2回蘇生する",hint:"蘇生可能な状況で挑戦"},
+ {text:"味方を4回蘇生する",hint:"支援を意識して立ち回ろう"},
+ {text:"味方を5回補給・支援する",hint:"補給や支援が可能な装備・状況で挑戦"},
+ {text:"敵車両に大ダメージを与える",hint:"対車両装備や設置物を活用"},
+ {text:"敵車両を1台破壊する",hint:"対車両チャレンジ"},
+ {text:"ヘッドショットを3回決める",hint:"狙いを定めて撃とう"},
+ {text:"デス数を5回以内に抑える",hint:"慎重な立ち回りを意識"}
+];
+let currentObjective=null;
+function pickObjective(){currentObjective=objectives[Math.floor(Math.random()*objectives.length)];$("objective").textContent=currentObjective.text;$("objectiveHint").textContent=currentObjective.hint;}
 function draw(){let ops=all.filter(x=>x.kind==="operator"&&!excluded.includes(x.id)),guns=all.filter(x=>x.kind==="weapon"&&!excluded.includes(x.id));if(!ops.length||!guns.length){$("status").textContent="抽選できるキャラと武器をそれぞれ1つ以上有効にしてください。";return}
-let op=drawOne(ops,lastOp),gun=drawOne(guns,lastWeapon);lastOp=op.id;lastWeapon=gun.id;
+let op=drawOne(ops,lastOp),gun=drawOne(guns,lastWeapon);lastOp=op.id;lastWeapon=gun.id;pickObjective();
 $("operator").textContent=op.name;$("opClass").textContent=op.type;$("weapon").textContent=gun.name;$("weaponType").textContent=gun.type;
-let time=new Date().toLocaleString("ja-JP");history.unshift({op:op.name,opType:op.type,gun:gun.name,gunType:gun.type,time});history=history.slice(0,100);save();renderHistory();$("status").textContent="抽選完了！この組み合わせで出撃しよう。"}
+let time=new Date().toLocaleString("ja-JP");history.unshift({op:op.name,opType:op.type,gun:gun.name,gunType:gun.type,objective:currentObjective.text,time});history=history.slice(0,100);save();renderHistory();$("status").textContent="抽選完了！この組み合わせで出撃しよう。"}
 function renderPool(){let q=$("search").value.toLowerCase(),kind=$("kind").value;let arr=all.filter(x=>(kind==="all"||x.kind===kind)&&(x.name.toLowerCase().includes(q)||x.type.toLowerCase().includes(q)));$("pool").innerHTML=arr.map(x=>`<label class="item"><input type="checkbox" data-id="${x.id}" ${excluded.includes(x.id)?"":"checked"}><span>${x.name}<small>${x.kind==="operator"?"オペレーター":"武器"}・${x.type}</small></span></label>`).join("")||'<div class="empty">該当する項目がありません</div>';$("pool").querySelectorAll("input").forEach(el=>el.addEventListener("change",()=>{let id=el.dataset.id;excluded=el.checked?excluded.filter(x=>x!==id):[...excluded,id];save()}))}
-function renderHistory(){$("history").innerHTML=history.length?history.map(h=>`<div class="entry"><div><b>${h.op} <span style="color:var(--muted);font-weight:400">×</span> ${h.gun}</b><small>${h.opType} ・ ${h.gunType}</small></div><small>${h.time}</small></div>`).join(""):'<div class="empty">まだ抽選履歴はありません。</div>'}
-$("draw").onclick=draw;$("reset").onclick=()=>{$("operator").textContent="？？？";$("weapon").textContent="？？？";$("opClass").textContent="未抽選";$("weaponType").textContent="未抽選";$("status").textContent="表示結果をリセットしました。"};
+function renderHistory(){$("history").innerHTML=history.length?history.map(h=>`<div class="entry"><div><b>${h.op} <span style="color:var(--muted);font-weight:400">×</span> ${h.gun}</b><small>${h.opType} ・ ${h.gunType}<br>${h.objective||"目標記録なし"}</small></div><small>${h.time}</small></div>`).join(""):'<div class="empty">まだ抽選履歴はありません。</div>'}
+$("draw").onclick=draw;$("rerollObjective").onclick=()=>{pickObjective();$("status").textContent="目標を再抽選しました。"};$("reset").onclick=()=>{$("operator").textContent="？？？";$("weapon").textContent="？？？";$("opClass").textContent="未抽選";$("weaponType").textContent="未抽選";$("status").textContent="表示結果をリセットしました。"};
 $("search").oninput=renderPool;$("kind").onchange=renderPool;
 $("allOn").onclick=()=>{excluded=[];save();renderPool()};$("allOff").onclick=()=>{excluded=all.map(x=>x.id);save();renderPool()};
 $("clearHistory").onclick=()=>{if(confirm("抽選履歴をすべて消去しますか？")){history=[];save();renderHistory()}};
